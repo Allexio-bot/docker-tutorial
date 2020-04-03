@@ -1,13 +1,13 @@
 # Docker & DevOps // Tutorial 1
 
-## Prerecquisite
-For the following tutorial, you gonna need [Docker](https://www.docker.com/) installed on your machine, [Git](https://github.com) and an IDE (Please respect yourself) or at least a text editor like [Vim](https://www.vim.org/) or [the other one which we do not care about](https://www.gnu.org/software/emacs/). 
+## Prerequisite
+
+For the following tutorial, you gonna need [Docker](https://www.docker.com/) installed on your machine, [Git](https://github.com) and an IDE (Please respect yourself) or at least a text editor like [Vim](https://www.vim.org/) or [the other one which we do not care about](https://www.gnu.org/software/emacs/).
 You do not need to be on Linux, Windows or Mac, thanks to docker :)
 
 You should fork now the project [https://github.com/adrienestimeo/ms-main-node](https://github.com/adrienestimeo/ms-main-node), we will work on it in the part 2.
 
 For the following tutorial, the architecture will be:
-
 
 ```
 | myProject/
@@ -29,7 +29,7 @@ For the following tutorial, the architecture will be:
 
 > "*Build, Ship, and Run Any App, Anywhere*"
 
-Docker lets you deploy application in custom environment via containers. *Docker provides an additional layer of abstraction and automation of operating-system-level virtualization on Windows and Linux* (*[Wikipedia](https://en.wikipedia.org/wiki/Docker_(software))*). 
+Docker lets you deploy application in custom environment via containers. *Docker provides an additional layer of abstraction and automation of operating-system-level virtualization on Windows and Linux* (*[Wikipedia](https://en.wikipedia.org/wiki/Docker_(software))*).
 
 To keep it simple and in a *non-computer-science* language: **Docker** lets you deploy your application in any system by using your configuration in order to create an expected environment.
 
@@ -40,7 +40,8 @@ The installation part is probably the worst part of Docker (especially on Window
 Go on **[Docker](https://www.docker.com/)** and follow the instructions.
 
 To test your installation, try the next command:
-```
+
+```bash
 docker run hello-world
 ```
 
@@ -54,46 +55,48 @@ If everything is fine, **Docker** we let you know :)
 Depending on the complexity of your project, you can have two different architecture.
 
 1. **Without** *docker-compose* (simple app)
-```
-$ 	 MyProject/
-		| .git
-		| .gitignore
-		| Dockerfile
-		| public/
-		    | index.html
-		    | ...
-		| server.js
-		| ...
+
+```bash
+$   MyProject/
+        | .git
+        | .gitignore
+        | Dockerfile
+        | public/
+            | index.html
+            | ...
+        | server.js
+        | ...
 ```
 
 2. **With** *docker-compose* (complex app)
-```
-$ 	 MyProject/
-		| docker-compose.yml
-		| Database/
-			| .git
-			| .gitignore
-			| Dockerfile
-			| db.conf
-			| ...
-		| Logic/
-			| .git
-			| .gitignore
-			| Dockerfile
-			| server.js
-			| ...
-		| API/
-			| .git
-			| .gitignore
-			| Dockerfile
-			| api.js
-			| ...
-		| Reverse_Proxy/
-			| .git
-			| .gitignore
-			| Dockerfile
-			| nginx.conf
-			| ...
+
+```bash
+$   MyProject/
+        | docker-compose.yml
+        | Database/
+            | .git
+            | .gitignore
+            | Dockerfile
+            | db.conf
+            | ...
+        | Logic/
+            | .git
+            | .gitignore
+            | Dockerfile
+            | server.js
+            | ...
+        | API/
+            | .git
+            | .gitignore
+            | Dockerfile
+            | api.js
+            | ...
+        | Reverse_Proxy/
+            | .git
+            | .gitignore
+            | Dockerfile
+            | nginx.conf
+            | ...
 ```
 
 ### Dockerfile
@@ -133,122 +136,122 @@ networks:
     # An open network, which will be open to the world
     open-network:
         driver: bridge
-        
+
     # An internal network, which will be open to specific microservice
     internal-network:
         driver: bridge
-        
+
 # List our services
 services:
 
     # A reverse proxy
     ms-reverse-proxy:
-    
+
         # Use remote image
         image: traefik:1.7.16
-        
+
         # Always restart (in case of crash)
         restart: always
-        
+
         # Network to use
         # | open-network ONLY
         networks:
             - open-network
-            
+
         # The argument when launching the application
         command: --docker
-        
+
         # Specify labels, used by the application
         labels:
             - "traefik.frontend.rule=Host:monitor.estimeo.localhost"
-            
+
         # Host data which the container will have access to
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-            
+
         # Port used by the application and linked to the host
         # | Port 80 of the container linked to the port 80 of the host
         ports:
             - "80:80"
-            
+
     # A frontend service
     ms-front-website:
-    
+
         # Use local image
         build: ./ms-front-website
-        
+
         # Always restart (in case of crash)
         restart: always
-        
+
         # Network to use
         # | open-network AND internal-network
         networks:
             - open-network
             - internal-network
-            
+
         # This service depends on another one. So it cannot be fully operationnal without it
         # | ms-mongo-database, the database of our architecture
         depends_on:
             - ms-mongo-database
-            
+
         # Specify a file hosting our environment configuration (environment variables)
         env_file: production.env
-        
+
         # Specify labels, used by the application
         labels:
             - "traefik.domain=localhost"
             - "traefik.port=8081"
             - "traefik.frontend.rule=Host:myapp.localhost"
             - "traefik.backend=ms-front-website"
-            
+
     # A worker microservice
     ms-worker-node:
-    
+
         # Use local image
         build: ./ms-worker-node
-        
+
         # Always restart (in case of crash)
         restart: always
-        
+
         # Network to use
         # | internal-network ONLY
         networks:
             - internal-network
-            
+
         # This service depends on another one. So it cannot be fully operationnal without it
         # | ms-mongo-database, the database of our architecture
         depends_on:
             - ms-mongo-database
-            
+
         # Specify a file hosting our environment configuration (environment variables)
         env_file: production.env
-        
+
         # Specify labels, used by the application
         labels:
             - "traefik.domain=localhost"
             - "traefik.backend=ms-worker-node"
-            
+
     # A database
     ms-mongo-database:
-    
+
         # Use remote image
         image: "mongo:3.4.23"
-        
+
         # Always restart (in case of crash)
         restart: always
-        
+
         # Network to use
         # | internal-network ONLY
         networks:
             - internal-network
-            
+
         # Specify a file hosting our environment configuration (environment variables)
         env_file: production.env
-        
+
         # Specify labels, used by the application
         labels:
             - "traefik.enable=false"
-            
+
         # Port used by the application and NOT linked to the host
         # | Port 27017 of the container opened on the internal-network ONLY
         ports:
@@ -256,16 +259,20 @@ services:
 ```
 
 ### Docker machine
+
 ***docker-machine*** is a service like process. It is used to create and manage all of your containers / images. It differs if you are on *Windows* or *Linux / Unix*:
 
 * *Windows*
-```
+
+```bash
 docker-machine stop
 docker-machine start
 docker-machine restart
 ```
+
 * *Linux / Unix*
-```
+
+```bash
 (sudo) (systemctl) stop docker
 (sudo) (systemctl) start docker
 (sudo) (systemctl) restart docker
@@ -276,21 +283,25 @@ docker-machine restart
 #### Build / Run
 
 To create and run a project inside a container, we first have to build one:
+
 ```bash
 docker build -t username/projectname /path/to/dockerfile
 ```
 
 and finally run it:
+
 ```bash
 docker run username/projectname
 ```
 
 or via *docker-compose* (build + run):
+
 ```bash
 docker-compose up --build
 ```
 
 #### List / Stop / Remove
+
 ```bash
 #List
 docker ps -a
@@ -310,13 +321,13 @@ With the following steps, we will try to transform a monolithic project into an 
 
 Currently, this is how the project is launched:
 
-1. [Manual]		    We configure our Environment
-2. [Manual] 		We create the new feature
-3. [Manual] 		We commit / push it (On a ***dev*** branch of course ;) )
-5. [Manual] 		We build the environment, and test our project with the new feature
-6. [Manual] 		We notify Slack (or whatever) if everything is good (or not).
-7. [Manual] 		If everything is good, we pull the new feature on a remote server
-8. [Manual] 		We restart your project
+1. [Manual]         We configure our Environment
+2. [Manual]         We create the new feature
+3. [Manual]         We commit / push it (On a ***dev*** branch of course ;) )
+4. [Manual]         We build the environment, and test our project with the new feature
+5. [Manual]         We notify Slack (or whatever) if everything is good (or not).
+6. [Manual]         If everything is good, we pull the new feature on a remote server
+7. [Manual]         We restart your project
 
 ### _Dockerized_ App
 
@@ -349,7 +360,7 @@ Try to build and run this container. If you did it well, you should be able to a
 > * Check again your Dockerfile,
 > * Check your `build` command,
 > * Check your `run` command and the `port` option for example ;),
-> * Maybe you cannot access `localhost` directly. In that case, you can check your docker-machine ip with `docker-machine inspect` 
+> * Maybe you cannot access `localhost` directly. In that case, you can check your docker-machine ip with `docker-machine inspect`
 
 Congratulations, you made your first (or not) *Dockerized*, portable application.
 
@@ -369,7 +380,7 @@ You can now test everything with a simple `docker-compose up --build`. If everyt
 
 ### Adding a Reverse Proxy
 
-In order to create a clean application, we will add a Reverse Proxy: **[Traefik ](https://docs.traefik.io/)** (*Cocorico !*)
+In order to create a clean application, we will add a Reverse Proxy: **[Traefik](https://docs.traefik.io/)** (*Cocorico !*)
 
 We will add the service `ms-reverse-proxy` in the `docker-compose.yml` with the following rules:
 
@@ -398,7 +409,7 @@ Let's create a new project on github, named `ms-number-computer` and clone it.
 
 The current project architecture should be the following:
 
-```
+```bash
 | myProject/
     | docker-compose.yml
     | ms-main-node/
@@ -433,6 +444,7 @@ Following are the draft of each file except the `README.md` that you will comple
 ___
 
 `package.json`:
+
 ```json
 {
     "name": "ms-number-computer",
@@ -453,9 +465,11 @@ ___
     }
 }
 ```
+
 ___
 
 `config.json`:
+
 ```json
 {  
     "environment": "development",  
@@ -471,9 +485,11 @@ ___
     }  
 }
 ```
+
 ___
 
 `manager.js`:
+
 ```javascript
 const MM = require('ms-manager');  
 let config = require(`./config.json`) || {};  
@@ -482,12 +498,12 @@ MM.init(config, (err, serviceInfo) => {
     if (err) {  
         return console.error(err);  
     }
-    
+
     /**  
-    * Our micro-service is now up. 
+    * Our micro-service is now up.
     * */
     console.log('#Micro-service UP#');  
-    
+
     /**
     * You can now subscribe to specific message
     */
@@ -506,25 +522,27 @@ MM.init(config, (err, serviceInfo) => {
     });
 });
 ```
+
 ___
 
 `computer.js`:
+
 ```javascript
 module.exports = {
     // TODO: Create our computer function here
     add: function(a, b) {
-        
+
         // TODO
-        
+
         return 0;
     }
 };
 ```
 
-
 ___
 
 `computer.spec.js`:
+
 ```javascript
 'use strict';
 
@@ -599,25 +617,24 @@ ___
 `Dockerfile_test`
 The docker `Dockerfile_test` differs on the entrypoint, which will be `ENTRYPOINT [ "npm", "run", "test" ]`
 
-
-
 You can start to test your application with the following commands:
- 
+
 1. `docker build -t ms-number-computer --file Dockerfile_test .`
 2. `docker run --name ms-number-computer ms-number-computer`
 3. `docker stop ms-number-computer`
 4. `docker rm ms-number-computer`
- 
+
 You should see that the test is failing, because the function `add` is missing in the `computer.js` file. But it also means that our microservice is nicely setup.
 In order to do TDD, you will first have to write the test suit. We can start with the current tests and I recommend you to add many, many, MANY more.
- 
+
 Time for you to work and write the code of the `add` function. When your test suite will pass, you can continue !
 
 Let's add it to our system. In order to do that, modify our `docker-compose.yml`:
- 
+
 1. Create a new network `internal-network`,
 2. Create a new service `ms-redis-cache` with the following configuration
-    ```
+
+    ```yaml
     ms-redis-cache:
         image: "redis:3.2.11-alpine"
         restart: always
@@ -629,14 +646,16 @@ Let's add it to our system. In order to do that, modify our `docker-compose.yml`
         ports:
             - "6379"
     ```
+
 3. Adding the new service `ms-number-computer` which will restart always, build from `./ms-number-computer` use both `internal-network` and `external-network`.
 4. Adding the `internal-network` to `ms-main-node`.
 5. Add the following lines in both `ms-main-node` and `ms-number-computer`.
-    ```
+
+    ```yaml
     depends_on:
         - ms-redis-cache
     ```
-    
+
 You can now test the computation part on the project after a `docker-compose up --build` !
 
 ## Part 2
